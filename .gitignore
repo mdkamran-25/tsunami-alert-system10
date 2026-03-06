@@ -11,6 +11,7 @@ out/
 # Local env files
 .env*
 !.env.local.example
+!.env.production
 
 # Log files
 npm-debug.log*
@@ -26,3 +27,4 @@ coverage/
 # Ignore typescript build info
 *.tsbuildinfo
 .vercel
+.env*.local

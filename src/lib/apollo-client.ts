@@ -82,9 +82,11 @@ const errorLink = onError((errorResponse) => {
 
       // Handle authentication errors
       if (error.extensions?.code === 'UNAUTHENTICATED') {
-        // Redirect to login or refresh token
+        // Clear stale tokens – AuthGuard will redirect when needed
         if (typeof window !== 'undefined') {
-          window.location.href = '/auth/signin';
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
         }
       }
 
