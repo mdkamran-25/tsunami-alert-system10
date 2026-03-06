@@ -9,7 +9,7 @@ import { auth } from './firebase';
 // HTTP Link
 const httpLink = createHttpLink({
   uri: process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT || 'http://localhost:4000/graphql',
-  credentials: 'include',
+  credentials: 'omit',
 });
 
 // WebSocket Link for subscriptions
@@ -20,12 +20,18 @@ const wsLink =
           url: process.env.NEXT_PUBLIC_GRAPHQL_WS_ENDPOINT || 'ws://localhost:4000/graphql',
           connectionParams: async () => {
             try {
-              const token = await auth.currentUser?.getIdToken();
+              // Prefer JWT token from localStorage; fall back to Firebase token
+              const jwtToken =
+                typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+              let token = jwtToken;
+              if (!token) {
+                token = (await auth.currentUser?.getIdToken()) ?? null;
+              }
               return {
                 authorization: token ? `Bearer ${token}` : '',
               };
             } catch (error) {
-              console.warn('Failed to get Firebase token for WebSocket connection:', error);
+              console.warn('Failed to get token for WebSocket connection:', error);
               return {};
             }
           },
