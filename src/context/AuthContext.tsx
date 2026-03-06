@@ -97,32 +97,36 @@ export const useAuth = () => {
   return context;
 };
 
-// Custom hook for checking authentication status
+// Custom hook for checking authentication status (JWT-based)
 export const useRequireAuth = () => {
   const { user, loading } = useAuth();
+  // Also consider JWT token — user may be authenticated via our backend,
+  // not through Firebase.
+  const hasJwt = typeof window !== 'undefined' ? !!localStorage.getItem('authToken') : false;
 
   useEffect(() => {
-    if (!loading && !user) {
-      // Redirect to login page
+    if (!loading && !user && !hasJwt) {
       window.location.href = '/auth/signin';
     }
-  }, [user, loading]);
+  }, [user, loading, hasJwt]);
 
-  return { user, loading };
+  return { user, loading, authenticated: !!user || hasJwt };
 };
 
-// Custom hook for role-based access control
+// Custom hook for role-based access control (JWT-aware)
 export const useRequireRole = (requiredRoles: string[]) => {
   const { user, userProfile, loading } = useAuth();
+  const hasJwt = typeof window !== 'undefined' ? !!localStorage.getItem('authToken') : false;
 
-  const hasRequiredRole = userProfile?.role && requiredRoles.includes(userProfile.role);
+  // If authenticated via JWT (not Firebase), skip role check on client
+  const hasRequiredRole =
+    hasJwt || (userProfile?.role ? requiredRoles.includes(userProfile.role) : false);
 
   useEffect(() => {
-    if (!loading && (!user || !hasRequiredRole)) {
-      // Redirect to unauthorized page or login
-      window.location.href = '/unauthorized';
+    if (!loading && !user && !hasJwt) {
+      window.location.href = '/auth/signin';
     }
-  }, [user, userProfile, loading, hasRequiredRole]);
+  }, [user, loading, hasJwt]);
 
   return { user, userProfile, loading, hasRequiredRole };
 };
