@@ -16,9 +16,7 @@ interface AuthGuardProps {
  * No Firebase dependency — keeps it fast and race-condition-free.
  */
 export function AuthGuard({ children }: AuthGuardProps) {
-  const [status, setStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>(
-    'loading'
-  );
+  const [status, setStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
