@@ -1,5 +1,30 @@
-mutation GoogleAuth($input: GoogleAuthInput!) {
-  googleAuth(input: $input) {
+mutation Login($email: String!, $password: String!) {
+  login(email: $email, password: $password) {
+    token
+    refreshToken
+    user {
+      id
+      email
+      name
+      avatar
+      role
+      isActive
+      preferences {
+        alertTypes
+        regions
+        emailNotifications
+        smsNotifications
+        pushNotifications
+      }
+      createdAt
+      updatedAt
+    }
+    expiresIn
+  }
+}
+
+mutation Signup($email: String!, $password: String!, $name: String) {
+  signup(email: $email, password: $password, name: $name) {
     token
     refreshToken
     user {
@@ -52,26 +77,6 @@ mutation Logout {
   logout
 }
 
-mutation UpdateUserPreferences($preferences: UserPreferencesInput!) {
-  updateUserPreferences(preferences: $preferences) {
-    id
-    email
-    name
-    avatar
-    role
-    isActive
-    preferences {
-      alertTypes
-      regions
-      emailNotifications
-      smsNotifications
-      pushNotifications
-    }
-    createdAt
-    updatedAt
-  }
-}
-
 mutation UpdateProfile($name: String, $avatar: String) {
   updateProfile(name: $name, avatar: $avatar) {
     id
@@ -79,15 +84,52 @@ mutation UpdateProfile($name: String, $avatar: String) {
     name
     avatar
     role
+  }
+}
+
+mutation UpdatePreferences(
+  $alertTypes: [String!]
+  $regions: [String!]
+  $emailNotifications: Boolean
+  $smsNotifications: Boolean
+  $pushNotifications: Boolean
+  $theme: String
+  $language: String
+) {
+  updatePreferences(
+    alertTypes: $alertTypes
+    regions: $regions
+    emailNotifications: $emailNotifications
+    smsNotifications: $smsNotifications
+    pushNotifications: $pushNotifications
+    theme: $theme
+    language: $language
+  ) {
+    id
+    alertTypes
+    regions
+    emailNotifications
+    smsNotifications
+    pushNotifications
+  }
+}
+
+mutation UpdateUserRole($userId: String!, $role: UserRole!) {
+  updateUserRole(userId: $userId, role: $role) {
+    id
+    email
+    name
+    role
     isActive
-    preferences {
-      alertTypes
-      regions
-      emailNotifications
-      smsNotifications
-      pushNotifications
-    }
-    createdAt
-    updatedAt
+  }
+}
+
+mutation ToggleUserActive($userId: String!) {
+  toggleUserActive(userId: $userId) {
+    id
+    email
+    name
+    role
+    isActive
   }
 }

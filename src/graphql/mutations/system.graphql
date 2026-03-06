@@ -1,84 +1,10 @@
-mutation TriggerAnalysis {
-  triggerAnalysis {
-    id
-    anomalyDetected
-    confidence
-    alertLevel
-    gpsAnalysis {
-      anomalousStations {
-        id
-        stationId
-        magnitude
-        timestamp
-      }
-      maxDisplacement
-      meanDisplacement
-      triggeredStationsCount
-      totalStations
-      confidence
-      status
-    }
-    satelliteAnalysis {
-      anomalyDetected
-      anomalyScore
-      region
-      confidence
-      status
-      metadata
-    }
-    combinedAnalysis {
-      combinedConfidence
-      detectionStatus
-      gpsTriggered
-      satelliteTriggered
-      riskAdjustedConfidence
-      regionalRiskFactor
-    }
-    timestamp
-    region
-  }
-}
-
-mutation SendTestAlert($message: String!, $recipients: [String!]!) {
-  sendTestAlert(message: $message, recipients: $recipients)
-}
+# System mutations
+# Note: acknowledgeAlert and resolveAlert are the primary system mutations
 
 mutation AcknowledgeAlert($alertId: String!) {
   acknowledgeAlert(alertId: $alertId)
 }
 
-mutation RunHealthCheck {
-  runHealthCheck {
-    id
-    overallStatus
-    components {
-      name
-      status
-      responseTime
-      errorRate
-      lastCheck
-      details
-    }
-    metrics {
-      uptime
-      responseTime
-      dataFreshness
-      errorRate
-      resourceUsage {
-        cpu
-        memory
-        disk
-        network
-      }
-    }
-    timestamp
-  }
-}
-
-mutation ClearCache {
-  clearCache
-}
-
-mutation RestartComponent($componentName: String!) {
-  restartComponent(componentName: $componentName)
+mutation ResolveAlert($alertId: String!) {
+  resolveAlert(alertId: $alertId)
 }

@@ -2,6 +2,7 @@ query GetSystemHealth {
   systemHealth {
     id
     overallStatus
+    uptime
     components {
       name
       status
@@ -9,61 +10,75 @@ query GetSystemHealth {
       errorRate
       lastCheck
       details
+      errorMessage
     }
-    metrics {
-      uptime
-      responseTime
-      dataFreshness
-      errorRate
-      resourceUsage {
-        cpu
-        memory
-        disk
-        network
-      }
-      performanceData {
-        timestamp
-        responseTime
-        cpuUsage
-        memoryUsage
-        activeConnections
-      }
-    }
-    timestamp
-  }
-}
-
-query GetComponentHealth($componentName: String!) {
-  componentHealth(componentName: $componentName) {
-    name
-    status
-    responseTime
-    errorRate
+    metrics
     lastCheck
-    details
   }
 }
 
-query GetPerformanceMetrics($hours: Int = 24) {
-  performanceMetrics(hours: $hours) {
-    timestamp
-    responseTime
-    cpuUsage
-    memoryUsage
-    activeConnections
-  }
-}
-
-query GetNotificationHistory($pagination: PaginationInput) {
-  notificationHistory(pagination: $pagination) {
+query GetNotifications($pagination: PaginationInput) {
+  notifications(pagination: $pagination) {
     id
     type
     recipient
+    subject
     message
     status
     sentAt
     deliveredAt
-    errorMessage
-    metadata
+    failureReason
+    retryCount
+    createdAt
+  }
+}
+
+query GetAuditLogs($pagination: PaginationInput) {
+  auditLogs(pagination: $pagination) {
+    id
+    userId
+    action
+    resource
+    resourceId
+    changes
+    ipAddress
+    createdAt
+  }
+}
+
+query GetAdminStats {
+  adminStats {
+    totalUsers
+    activeUsers
+    totalAlerts
+    activeAlerts
+    totalStations
+    activeStations
+    totalNotifications
+    recentIngestionLogs {
+      id
+      source
+      status
+      recordsProcessed
+      recordsFailed
+      errorMessage
+      startTime
+      endTime
+      duration
+      createdAt
+    }
+  }
+}
+
+query GetUsers($pagination: PaginationInput) {
+  users(pagination: $pagination) {
+    id
+    email
+    name
+    avatar
+    role
+    isActive
+    createdAt
+    updatedAt
   }
 }
