@@ -53,7 +53,6 @@ src/
 ├── hooks/                # Custom React hooks
 ├── lib/                  # Utility libraries
 │   ├── apollo-client.ts  # Apollo Client setup
-│   ├── firebase.ts       # Firebase config
 │   └── utils.ts          # Utility functions
 ├── context/              # React Context
 ├── styles/               # Global styles

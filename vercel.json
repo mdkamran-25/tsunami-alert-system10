@@ -52,17 +52,11 @@
       ]
     }
   ],
-  "redirects": [
-    {
-      "source": "/dashboard",
-      "destination": "/",
-      "permanent": false
-    }
-  ],
+  "redirects": [],
   "rewrites": [
     {
       "source": "/api/graphql",
-      "destination": "https://your-backend-url.com/graphql"
+      "destination": "https://major-project-backend-o1vb.onrender.com/graphql"
     }
   ]
 }

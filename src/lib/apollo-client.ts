@@ -51,11 +51,9 @@ const errorLink = onError(({ graphQLErrors, networkError }) => {
         error.extensions
       );
 
-      // Clear stale tokens on UNAUTHENTICATED – AuthGuard handles redirect
-      if (error.extensions?.code === 'UNAUTHENTICATED' && typeof window !== 'undefined') {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
+      // Log UNAUTHENTICATED but don't clear tokens (AuthGuard handles redirect)
+      if (error.extensions?.code === 'UNAUTHENTICATED') {
+        console.warn('[Auth] Token may be expired – AuthGuard will handle redirect');
       }
     });
   }
