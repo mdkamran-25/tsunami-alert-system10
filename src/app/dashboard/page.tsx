@@ -24,7 +24,7 @@ export default function DashboardPage() {
     alert,
     loading: alertLoading,
     error: alertError,
-  } = useCurrentAlert(undefined, { pollInterval: 10000 });
+  } = useCurrentAlert({ pollInterval: 10000 });
   const {
     stations,
     loading: stationsLoading,
