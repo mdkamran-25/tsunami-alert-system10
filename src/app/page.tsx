@@ -1,17 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
 import { hasFirebaseConfig } from '@/lib/firebase';
 import Link from 'next/link';
 
 export default function HomePage() {
-  useEffect(() => {
-    // If user is already logged in (JWT), send them straight to dashboard
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      window.location.href = '/dashboard';
-    }
-  }, []);
+  // Static landing page — no auto-redirect to prevent reload loops.
+  // After login/signup, window.location.href in those pages handles the redirect.
 
   // Always render the same landing page on server AND client (no hydration mismatch)
   return (
