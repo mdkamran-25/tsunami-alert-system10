@@ -4,240 +4,122 @@ import { getMainDefinition } from '@apollo/client/utilities';
 import { setContext } from '@apollo/client/link/context';
 import { onError } from '@apollo/client/link/error';
 import { createClient } from 'graphql-ws';
-import { auth } from './firebase';
 
-// HTTP Link
+// ── HTTP Link ──
 const httpLink = createHttpLink({
   uri: process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT || 'http://localhost:4000/graphql',
   credentials: 'omit',
 });
 
-// WebSocket Link for subscriptions
+// ── WebSocket Link (subscriptions) ──
 const wsLink =
   typeof window !== 'undefined'
     ? new GraphQLWsLink(
         createClient({
           url: process.env.NEXT_PUBLIC_GRAPHQL_WS_ENDPOINT || 'ws://localhost:4000/graphql',
-          connectionParams: async () => {
-            try {
-              // Prefer JWT token from localStorage; fall back to Firebase token
-              const jwtToken =
-                typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
-              let token = jwtToken;
-              if (!token) {
-                token = (await auth.currentUser?.getIdToken()) ?? null;
-              }
-              return {
-                authorization: token ? `Bearer ${token}` : '',
-              };
-            } catch (error) {
-              console.warn('Failed to get token for WebSocket connection:', error);
-              return {};
-            }
+          connectionParams: () => {
+            const token = localStorage.getItem('authToken');
+            return { authorization: token ? `Bearer ${token}` : '' };
           },
           shouldRetry: () => true,
           retryAttempts: 5,
-          retryWait: async (retries) => {
-            return new Promise((resolve) => {
-              setTimeout(resolve, Math.min(1000 * Math.pow(2, retries), 30000));
-            });
-          },
+          retryWait: async (retries) =>
+            new Promise((resolve) =>
+              setTimeout(resolve, Math.min(1000 * Math.pow(2, retries), 30000))
+            ),
         })
       )
     : null;
 
-// Auth Link
-const authLink = setContext(async (_, { headers }) => {
-  try {
-    // Prefer our own JWT token; fall back to Firebase token if not present
-    const jwtToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
-
-    let token = jwtToken;
-    if (!token) {
-      token = (await auth.currentUser?.getIdToken()) ?? null;
-    }
-
-    return {
-      headers: {
-        ...headers,
-        authorization: token ? `Bearer ${token}` : '',
-      },
-    };
-  } catch (error) {
-    console.warn('Failed to get auth token for HTTP request:', error);
-    return { headers };
-  }
+// ── Auth Link – attaches JWT from localStorage ──
+const authLink = setContext((_, { headers }) => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+  return {
+    headers: {
+      ...headers,
+      authorization: token ? `Bearer ${token}` : '',
+    },
+  };
 });
 
-// Error Link
-const errorLink = onError((errorResponse) => {
-  const { graphQLErrors, networkError } = errorResponse as any;
-
+// ── Error Link ──
+const errorLink = onError(({ graphQLErrors, networkError }) => {
   if (graphQLErrors) {
     graphQLErrors.forEach((error: any) => {
       console.error(
-        `[GraphQL error]: Message: ${error.message}, Location: ${error.locations}, Path: ${error.path}`,
+        `[GraphQL error]: Message: ${error.message}, Path: ${error.path}`,
         error.extensions
       );
 
-      // Handle authentication errors
-      if (error.extensions?.code === 'UNAUTHENTICATED') {
-        // Clear stale tokens – AuthGuard will redirect when needed
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('user');
-        }
-      }
-
-      // Handle rate limiting
-      if (error.extensions?.code === 'TOO_MANY_REQUESTS') {
-        console.warn('Rate limit exceeded. Please slow down your requests.');
+      // Clear stale tokens on UNAUTHENTICATED – AuthGuard handles redirect
+      if (error.extensions?.code === 'UNAUTHENTICATED' && typeof window !== 'undefined') {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
       }
     });
   }
 
   if (networkError) {
     console.error(`[Network error]: ${networkError}`);
-
-    // Handle network errors
-    if ((networkError as any).message?.includes('Failed to fetch')) {
-      console.warn('Network connection lost. Retrying...');
-    }
   }
 });
 
-// Split link for HTTP and WebSocket
+// ── Split: WS for subscriptions, HTTP for everything else ──
 const splitLink =
   typeof window !== 'undefined' && wsLink
     ? split(
         ({ query }) => {
-          const definition = getMainDefinition(query);
-          return (
-            definition.kind === 'OperationDefinition' && definition.operation === 'subscription'
-          );
+          const def = getMainDefinition(query);
+          return def.kind === 'OperationDefinition' && def.operation === 'subscription';
         },
         wsLink,
         from([errorLink, authLink, httpLink])
       )
     : from([errorLink, authLink, httpLink]);
 
-// Cache configuration
+// ── Cache ──
 const cache = new InMemoryCache({
   typePolicies: {
     Query: {
       fields: {
-        gpsReadings: {
-          keyArgs: false,
-          merge(existing = [], incoming) {
-            // Handle both array format and pagination format
-            if (Array.isArray(incoming)) {
-              return [...(existing || []), ...incoming];
-            }
-            return incoming;
-          },
-        },
-        satelliteData: {
-          keyArgs: false,
-          merge(existing = [], incoming) {
-            // Handle both array format and pagination format
-            if (Array.isArray(incoming)) {
-              return [...(existing || []), ...incoming];
-            }
-            return incoming;
-          },
-        },
-        alertHistory: {
-          keyArgs: false,
-          merge(existing = [], incoming) {
-            // Handle both array format and pagination format
-            if (Array.isArray(incoming)) {
-              return [...(existing || []), ...incoming];
-            }
-            return incoming;
-          },
-        },
-      },
-    },
-    AlertStatus: {
-      fields: {
-        lastUpdated: {
-          merge: false, // Always use incoming value
-        },
-      },
-    },
-    GPSReading: {
-      fields: {
-        timestamp: {
-          merge: false,
-        },
-      },
-    },
-    SatelliteData: {
-      fields: {
-        timestamp: {
-          merge: false,
-        },
+        gpsReadings: { keyArgs: false, merge: (_e = [], i) => (Array.isArray(i) ? i : i) },
+        satelliteData: { keyArgs: false, merge: (_e = [], i) => (Array.isArray(i) ? i : i) },
+        alertHistory: { keyArgs: false, merge: (_e = [], i) => (Array.isArray(i) ? i : i) },
       },
     },
   },
 });
 
-// Apollo Client instance
+// ── Client ──
 export const apolloClient = new ApolloClient({
   link: splitLink,
   cache,
   defaultOptions: {
-    watchQuery: {
-      errorPolicy: 'all',
-      notifyOnNetworkStatusChange: true,
-    },
-    query: {
-      errorPolicy: 'all',
-    },
-    mutate: {
-      errorPolicy: 'none',
-    },
+    watchQuery: { errorPolicy: 'all', notifyOnNetworkStatusChange: true },
+    query: { errorPolicy: 'all' },
+    mutate: { errorPolicy: 'none' },
   },
-  // connectToDevTools: process.env.NODE_ENV === 'development', // Removed in Apollo Client v4
 });
 
-// Helper function to handle GraphQL errors
+// ── Helpers ──
 export const handleGraphQLError = (error: any) => {
-  if (error.networkError) {
-    console.error('Network Error:', error.networkError);
-    return 'Network error occurred. Please check your connection.';
-  }
-
-  if (error.graphQLErrors && error.graphQLErrors.length > 0) {
-    const graphqlError = error.graphQLErrors[0];
-    console.error('GraphQL Error:', graphqlError);
-
-    switch (graphqlError.extensions?.code) {
+  if (error.networkError) return 'Network error. Please check your connection.';
+  if (error.graphQLErrors?.[0]) {
+    const gql = error.graphQLErrors[0];
+    switch (gql.extensions?.code) {
       case 'UNAUTHENTICATED':
-        return 'You need to be logged in to perform this action.';
+        return 'You need to be logged in.';
       case 'FORBIDDEN':
-        return 'You do not have permission to perform this action.';
+        return 'Permission denied.';
       case 'BAD_USER_INPUT':
-        return graphqlError.message || 'Invalid input provided.';
-      case 'RATE_LIMIT_EXCEEDED':
-        return 'Too many requests. Please wait before trying again.';
+        return gql.message || 'Invalid input.';
       default:
-        return graphqlError.message || 'An error occurred.';
+        return gql.message || 'An error occurred.';
     }
   }
-
   return 'An unexpected error occurred.';
 };
 
-// Helper function to clear cache
-export const clearApolloCache = () => {
-  apolloClient.clearStore();
-};
-
-// Helper function to refetch queries
-export const refetchQueries = (queryNames: string[]) => {
-  return apolloClient.refetchQueries({
-    include: queryNames,
-  });
-};
+export const clearApolloCache = () => apolloClient.clearStore();
+export const refetchQueries = (names: string[]) => apolloClient.refetchQueries({ include: names });

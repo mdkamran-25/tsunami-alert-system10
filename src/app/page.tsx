@@ -1,13 +1,8 @@
 'use client';
 
-import { hasFirebaseConfig } from '@/lib/firebase';
 import Link from 'next/link';
 
 export default function HomePage() {
-  // Static landing page — no auto-redirect to prevent reload loops.
-  // After login/signup, window.location.href in those pages handles the redirect.
-
-  // Always render the same landing page on server AND client (no hydration mismatch)
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-tsunami-blue-50 via-white to-tsunami-green-50 p-4">
       <div className="w-full max-w-md space-y-6 text-center">
@@ -44,10 +39,6 @@ export default function HomePage() {
             🏠 Go to Dashboard
           </Link>
         </div>
-
-        {!hasFirebaseConfig && (
-          <p className="text-xs text-muted-foreground">Running in demo mode</p>
-        )}
       </div>
     </div>
   );

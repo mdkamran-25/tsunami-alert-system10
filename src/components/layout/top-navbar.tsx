@@ -65,13 +65,13 @@ const navigationItems = [
 
 export function TopNavbar() {
   const pathname = usePathname();
-  const { user, userProfile } = useAuth();
+  const { user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Filter navigation items based on user role
   const filteredNavItems = navigationItems.filter((item) => {
     if (!item.roles) return true;
-    return userProfile?.role && item.roles.includes(userProfile.role);
+    return user?.role && item.roles.includes(user.role);
   });
 
   const isActive = (href: string) => {

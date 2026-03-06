@@ -94,7 +94,7 @@ const userMenuItems = [
 export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-  const { userProfile } = useAuth();
+  const { user } = useAuth();
 
   const isActive = (href: string) => {
     if (href === '/dashboard') {
@@ -104,7 +104,7 @@ export function Navigation() {
   };
 
   const hasAccess = (roles: string[]) => {
-    return userProfile?.role && roles.includes(userProfile.role);
+    return user?.role && roles.includes(user.role);
   };
 
   return (

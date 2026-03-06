@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ShieldX, Home, ArrowLeft } from 'lucide-react';
 
 export default function UnauthorizedPage() {
-  const { user, userProfile } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
 
   const handleGoBack = () => {
@@ -34,11 +34,11 @@ export default function UnauthorizedPage() {
               <p className="text-sm text-muted-foreground">
                 {user ? (
                   <>
-                    You are signed in as <strong>{user.displayName || user.email}</strong>
-                    {userProfile && (
+                    You are signed in as <strong>{user.name || user.email}</strong>
+                    {user.role && (
                       <>
                         {' '}
-                        with <strong>{userProfile.role}</strong> role
+                        with <strong>{user.role}</strong> role
                       </>
                     )}
                     , but you don&apos;t have the required permissions to view this page.
@@ -48,7 +48,7 @@ export default function UnauthorizedPage() {
                 )}
               </p>
 
-              {userProfile && (
+              {user && (
                 <p className="text-xs text-muted-foreground">
                   Contact your administrator if you believe this is an error.
                 </p>
