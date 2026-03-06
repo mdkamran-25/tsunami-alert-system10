@@ -24,35 +24,48 @@ export function UserMenu() {
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // Create demo user when Firebase is not configured
-  const displayUser =
-    user ||
-    (!hasFirebaseConfig
-      ? {
-          displayName: 'Demo User',
-          email: 'demo@tsunami-alert.com',
-          photoURL: null,
-        }
-      : null);
+  // Read JWT user from localStorage as fallback
+  const jwtUser =
+    typeof window !== 'undefined'
+      ? (() => {
+          try {
+            const raw = localStorage.getItem('user');
+            return raw ? JSON.parse(raw) : null;
+          } catch {
+            return null;
+          }
+        })()
+      : null;
+
+  // Resolve display user: Firebase > JWT > Demo
+  const displayUser = user
+    ? { displayName: user.displayName, email: user.email, photoURL: user.photoURL }
+    : jwtUser
+      ? { displayName: jwtUser.name, email: jwtUser.email, photoURL: null }
+      : !hasFirebaseConfig
+        ? { displayName: 'Demo User', email: 'demo@tsunami-alert.com', photoURL: null }
+        : null;
 
   const displayProfile =
     userProfile ||
-    (!hasFirebaseConfig
-      ? {
-          role: 'ADMIN',
-          isActive: true,
-        }
-      : null);
+    (jwtUser ? { role: jwtUser.role, isActive: true } : null) ||
+    (!hasFirebaseConfig ? { role: 'ADMIN', isActive: true } : null);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
+      // Clear JWT tokens
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+
       if (hasFirebaseConfig && user) {
         await logoutUser();
       }
       router.push('/auth/signin');
     } catch (error) {
       console.error('Logout error:', error);
+      router.push('/auth/signin');
     } finally {
       setIsLoggingOut(false);
     }

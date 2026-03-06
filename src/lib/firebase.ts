@@ -6,8 +6,15 @@ import { getStorage } from 'firebase/storage';
 import { getAnalytics, isSupported } from 'firebase/analytics';
 
 // Check if Firebase environment variables are available
-const hasFirebaseConfig = !!(
-  process.env.NEXT_PUBLIC_FIREBASE_API_KEY && process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
+const isPlaceholder = (v?: string) => {
+  if (!v) return true;
+  const s = v.trim().toLowerCase();
+  return s === 'xxxx' || s.includes('your-project-id') || s === '';
+};
+
+const hasFirebaseConfig = !(
+  isPlaceholder(process.env.NEXT_PUBLIC_FIREBASE_API_KEY) ||
+  isPlaceholder(process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID)
 );
 
 // Default/fallback Firebase config for development or when env vars are missing
@@ -50,13 +57,25 @@ try {
   storage = getStorage(app);
 
   // Initialize Analytics only in browser environment and if supported
-  if (typeof window !== 'undefined' && hasFirebaseConfig) {
-    isSupported().then((supported) => {
-      if (supported) {
-        analytics = getAnalytics(app);
-        console.log('🔥 Firebase Analytics initialized');
-      }
-    });
+  if (
+    typeof window !== 'undefined' &&
+    hasFirebaseConfig &&
+    process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+  ) {
+    isSupported()
+      .then((supported) => {
+        if (supported) {
+          try {
+            analytics = getAnalytics(app);
+            console.log('🔥 Firebase Analytics initialized');
+          } catch (e) {
+            console.error('🔥 Firebase Analytics init error:', e);
+          }
+        }
+      })
+      .catch((e) => {
+        console.error('🔥 Firebase Analytics support check failed:', e);
+      });
   }
 
   if (!hasFirebaseConfig) {

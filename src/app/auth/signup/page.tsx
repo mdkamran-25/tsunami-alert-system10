@@ -2,77 +2,108 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-// import Image from 'next/image'; // Unused import
 import Link from 'next/link';
-import { useAuth } from '@/context/AuthContext';
-import { registerUser, loginWithGoogle, getAuthErrorMessage } from '@/lib/firebase-auth';
+import { useMutation } from '@apollo/client';
+import { gql } from '@apollo/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Chrome, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
+
+// GraphQL mutation for signup
+const SIGNUP_MUTATION = gql`
+  mutation Signup($email: String!, $password: String!, $name: String!) {
+    signup(email: $email, password: $password, name: $name) {
+      token
+      refreshToken
+      expiresIn
+      user {
+        id
+        email
+        name
+        role
+      }
+    }
+  }
+`;
 
 export default function SignUpPage() {
-  const { user } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const { toast } = useToast();
 
-  // Redirect if already logged in
-  if (user) {
-    router.replace('/dashboard');
-    return null;
-  }
+  const [signup] = useMutation(SIGNUP_MUTATION);
 
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
 
     // Validation
     if (!name.trim()) {
-      setError('Please enter your full name');
+      toast({
+        variant: 'destructive',
+        title: 'Validation error',
+        description: 'Please enter your full name.',
+      });
       setLoading(false);
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      toast({
+        variant: 'destructive',
+        title: 'Validation error',
+        description: 'Passwords do not match.',
+      });
       setLoading(false);
       return;
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+      toast({
+        variant: 'destructive',
+        title: 'Validation error',
+        description: 'Password must be at least 6 characters.',
+      });
       setLoading(false);
       return;
     }
 
     try {
-      await registerUser(email, password, name);
-      router.replace('/dashboard');
-    } catch (err: any) {
-      setError(getAuthErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  };
+      const { data } = await signup({
+        variables: {
+          email,
+          password,
+          name,
+        },
+      });
 
-  const handleGoogleSignUp = async () => {
-    setLoading(true);
-    setError('');
-
-    try {
-      await loginWithGoogle();
-      router.replace('/dashboard');
+      if (data?.signup?.token) {
+        localStorage.setItem('authToken', data.signup.token);
+        localStorage.setItem('refreshToken', data.signup.refreshToken);
+        localStorage.setItem('user', JSON.stringify(data.signup.user));
+        toast({
+          title: 'Account created!',
+          description: `Welcome, ${data.signup.user.name || data.signup.user.email}!`,
+        });
+        router.replace('/dashboard');
+      }
     } catch (err: any) {
-      setError(getAuthErrorMessage(err));
+      const message =
+        err?.graphQLErrors?.[0]?.message ||
+        err.message ||
+        'Failed to create account. Please try again.';
+      toast({
+        variant: 'destructive',
+        title: 'Sign up failed',
+        description: message,
+      });
     } finally {
       setLoading(false);
     }
@@ -95,40 +126,6 @@ export default function SignUpPage() {
           </CardHeader>
 
           <CardContent className="space-y-6">
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            {/* Google Sign Up Button */}
-            <Button
-              type="button"
-              variant="outline"
-              className="h-12 w-full border-2 text-base transition-all duration-200 hover:bg-gray-50"
-              onClick={handleGoogleSignUp}
-              disabled={loading}
-            >
-              {loading ? (
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              ) : (
-                <Chrome className="mr-2 h-5 w-5" />
-              )}
-              Continue with Google
-            </Button>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <Separator />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 font-medium text-muted-foreground">
-                  Or continue with email
-                </span>
-              </div>
-            </div>
-
             {/* Email Sign Up Form */}
             <form onSubmit={handleEmailSignUp} className="space-y-4">
               <div className="space-y-2">

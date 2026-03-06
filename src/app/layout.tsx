@@ -42,11 +42,11 @@ export const metadata: Metadata = {
     },
   ],
   creator: 'Tsunami Alert Team',
-  metadataBase: new URL(process.env.NEXTAUTH_URL || 'http://localhost:3000'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: process.env.NEXTAUTH_URL || 'http://localhost:3000',
+    url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
     title: 'Tsunami Early Warning System',
     description: 'Real-time tsunami monitoring and early warning system',
     siteName: 'Tsunami Alert',

@@ -20,17 +20,25 @@ export function AuthGuard({
   const { user, userProfile, loading } = useAuth();
   const router = useRouter();
   const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const [jwtAuthenticated, setJwtAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // Set timeout to prevent infinite loading
+    // Check for our own JWT token in localStorage
+    const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+    setJwtAuthenticated(!!token);
+  }, []);
+
+  useEffect(() => {
     const timeoutId = setTimeout(() => {
       setLoadingTimeout(true);
     }, 3000);
-
     return () => clearTimeout(timeoutId);
   }, []);
 
   useEffect(() => {
+    // JWT-authenticated users always get access
+    if (jwtAuthenticated) return;
+
     // If Firebase is not configured, allow access (demo mode)
     if (!hasFirebaseConfig) {
       console.warn('🔥 Firebase not configured, allowing access in demo mode');
@@ -38,13 +46,11 @@ export function AuthGuard({
     }
 
     if (!loading || loadingTimeout) {
-      // Not authenticated
-      if (!user) {
+      if (!user && jwtAuthenticated === false) {
         router.replace(redirectTo);
         return;
       }
 
-      // Check role requirements
       if (requiredRoles.length > 0 && userProfile) {
         const hasRequiredRole = requiredRoles.includes(userProfile.role);
         if (!hasRequiredRole) {
@@ -53,14 +59,37 @@ export function AuthGuard({
         }
       }
     }
-  }, [user, userProfile, loading, loadingTimeout, router, requiredRoles, redirectTo]);
+  }, [
+    user,
+    userProfile,
+    loading,
+    loadingTimeout,
+    jwtAuthenticated,
+    router,
+    requiredRoles,
+    redirectTo,
+  ]);
+
+  // Still determining JWT state
+  if (jwtAuthenticated === null) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // JWT token present — render children directly
+  if (jwtAuthenticated) {
+    return <>{children}</>;
+  }
 
   // If Firebase is not configured, render children directly (demo mode)
   if (!hasFirebaseConfig) {
     return <>{children}</>;
   }
 
-  // Show loading while checking authentication (with timeout)
+  // Show loading while checking Firebase authentication
   if (loading && !loadingTimeout) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -72,11 +101,13 @@ export function AuthGuard({
     );
   }
 
-  // Don't render children if not authenticated or doesn't have required role
-  if (
-    !user ||
-    (requiredRoles.length > 0 && userProfile && !requiredRoles.includes(userProfile.role))
-  ) {
+  // Not authenticated via Firebase either
+  if (!user) {
+    return null;
+  }
+
+  // Role check
+  if (requiredRoles.length > 0 && userProfile && !requiredRoles.includes(userProfile.role)) {
     return null;
   }
 

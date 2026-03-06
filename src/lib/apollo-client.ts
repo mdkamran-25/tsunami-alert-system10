@@ -4,7 +4,7 @@ import { getMainDefinition } from '@apollo/client/utilities';
 import { setContext } from '@apollo/client/link/context';
 import { onError } from '@apollo/client/link/error';
 import { createClient } from 'graphql-ws';
-import { getSession } from 'next-auth/react';
+import { auth } from './firebase';
 
 // HTTP Link
 const httpLink = createHttpLink({
@@ -20,12 +20,12 @@ const wsLink =
           url: process.env.NEXT_PUBLIC_GRAPHQL_WS_ENDPOINT || 'ws://localhost:4000/graphql',
           connectionParams: async () => {
             try {
-              const session = await getSession();
+              const token = await auth.currentUser?.getIdToken();
               return {
-                authorization: session?.accessToken ? `Bearer ${session.accessToken}` : '',
+                authorization: token ? `Bearer ${token}` : '',
               };
             } catch (error) {
-              console.warn('Failed to get session for WebSocket connection:', error);
+              console.warn('Failed to get Firebase token for WebSocket connection:', error);
               return {};
             }
           },
@@ -43,21 +43,23 @@ const wsLink =
 // Auth Link
 const authLink = setContext(async (_, { headers }) => {
   try {
-    const session = await getSession();
+    // Prefer our own JWT token; fall back to Firebase token if not present
+    const jwtToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+
+    let token = jwtToken;
+    if (!token) {
+      token = (await auth.currentUser?.getIdToken()) ?? null;
+    }
 
     return {
       headers: {
         ...headers,
-        authorization: session?.accessToken ? `Bearer ${session.accessToken}` : '',
+        authorization: token ? `Bearer ${token}` : '',
       },
     };
   } catch (error) {
-    console.warn('Failed to get session for HTTP request:', error);
-    return {
-      headers: {
-        ...headers,
-      },
-    };
+    console.warn('Failed to get auth token for HTTP request:', error);
+    return { headers };
   }
 });
 
@@ -119,29 +121,32 @@ const cache = new InMemoryCache({
       fields: {
         gpsReadings: {
           keyArgs: false,
-          merge(existing = { nodes: [], totalCount: 0, pageInfo: {} }, incoming) {
-            return {
-              ...incoming,
-              nodes: [...(existing.nodes || []), ...incoming.nodes],
-            };
+          merge(existing = [], incoming) {
+            // Handle both array format and pagination format
+            if (Array.isArray(incoming)) {
+              return [...(existing || []), ...incoming];
+            }
+            return incoming;
           },
         },
         satelliteData: {
           keyArgs: false,
-          merge(existing = { nodes: [], totalCount: 0, pageInfo: {} }, incoming) {
-            return {
-              ...incoming,
-              nodes: [...(existing.nodes || []), ...incoming.nodes],
-            };
+          merge(existing = [], incoming) {
+            // Handle both array format and pagination format
+            if (Array.isArray(incoming)) {
+              return [...(existing || []), ...incoming];
+            }
+            return incoming;
           },
         },
         alertHistory: {
           keyArgs: false,
-          merge(existing = { nodes: [], totalCount: 0, pageInfo: {} }, incoming) {
-            return {
-              ...incoming,
-              nodes: [...(existing.nodes || []), ...incoming.nodes],
-            };
+          merge(existing = [], incoming) {
+            // Handle both array format and pagination format
+            if (Array.isArray(incoming)) {
+              return [...(existing || []), ...incoming];
+            }
+            return incoming;
           },
         },
       },
@@ -183,7 +188,7 @@ export const apolloClient = new ApolloClient({
       errorPolicy: 'all',
     },
     mutate: {
-      errorPolicy: 'all',
+      errorPolicy: 'none',
     },
   },
   // connectToDevTools: process.env.NODE_ENV === 'development', // Removed in Apollo Client v4

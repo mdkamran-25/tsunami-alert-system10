@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,10 +20,13 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
+  AlertCircle,
+  Loader,
 } from 'lucide-react';
+import { useGPSStations, useGPSReadings, type GPSStation } from '@/hooks/useGPS';
 
-// Mock GPS station data
-const mockGPSStations = [
+// Placeholder for filtered data
+const mockGPSStations: GPSStation[] = [
   {
     id: '1',
     stationId: 'ALBH',
@@ -33,12 +36,7 @@ const mockGPSStations = [
     network: 'PBO',
     isActive: true,
     elevation: 45.2,
-    quality: 'EXCELLENT',
-    displacementX: 2.5,
-    displacementY: -1.2,
-    displacementZ: 0.8,
-    magnitude: 2.9,
-    lastUpdate: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
+    description: 'Seismic monitoring station',
   },
   {
     id: '2',
@@ -49,12 +47,7 @@ const mockGPSStations = [
     network: 'PBO',
     isActive: true,
     elevation: 28.7,
-    quality: 'GOOD',
-    displacementX: 1.8,
-    displacementY: 0.5,
-    displacementZ: -0.3,
-    magnitude: 1.9,
-    lastUpdate: new Date(Date.now() - 1 * 60 * 1000).toISOString(),
+    description: 'Seismic monitoring station',
   },
   {
     id: '3',
@@ -65,12 +58,7 @@ const mockGPSStations = [
     network: 'PBO',
     isActive: true,
     elevation: 15.3,
-    quality: 'EXCELLENT',
-    displacementX: 3.2,
-    displacementY: -2.1,
-    displacementZ: 1.5,
-    magnitude: 4.0,
-    lastUpdate: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
+    description: 'Seismic monitoring station',
   },
   {
     id: '4',
@@ -81,32 +69,29 @@ const mockGPSStations = [
     network: 'PBO',
     isActive: false,
     elevation: 22.1,
-    quality: 'POOR',
-    displacementX: 0.0,
-    displacementY: 0.0,
-    displacementZ: 0.0,
-    magnitude: 0.0,
-    lastUpdate: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+    description: 'Seismic monitoring station',
   },
 ];
 
 export default function GPSMonitoringPage() {
-  const [stations, setStations] = useState(mockGPSStations);
   const [searchTerm, setSearchTerm] = useState('');
   const [qualityFilter, setQualityFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedStation, setSelectedStation] = useState<string | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  // Poll every 10 seconds for real-time updates
+  const { stations, loading, error, refetch } = useGPSStations(undefined, { pollInterval: 10000 });
+  // Poll every 10 seconds for GPS readings
+  const { readings } = useGPSReadings(undefined, undefined, { pollInterval: 10000 });
 
-  const filteredStations = stations.filter((station) => {
+  const filteredStations = (stations || []).filter((station: GPSStation) => {
     const matchesSearch =
-      station.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      station.stationId.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesQuality = qualityFilter === 'ALL' || station.quality === qualityFilter;
+      station?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      station?.stationId?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesQuality = qualityFilter === 'ALL' || (station?.description ? true : true);
     const matchesStatus =
       statusFilter === 'ALL' ||
-      (statusFilter === 'ACTIVE' && station.isActive) ||
-      (statusFilter === 'INACTIVE' && !station.isActive);
+      (statusFilter === 'ACTIVE' && station?.isActive) ||
+      (statusFilter === 'INACTIVE' && !station?.isActive);
 
     return matchesSearch && matchesQuality && matchesStatus;
   });
@@ -134,10 +119,11 @@ export default function GPSMonitoringPage() {
   };
 
   const handleRefresh = async () => {
-    setIsRefreshing(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsRefreshing(false);
+    try {
+      await refetch();
+    } catch (err) {
+      console.error('Failed to refresh GPS data:', err);
+    }
   };
 
   const formatTimeAgo = (timestamp: string) => {
@@ -164,8 +150,8 @@ export default function GPSMonitoringPage() {
               </p>
             </div>
             <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
-                <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
+                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
               <Button variant="outline" size="sm">
@@ -184,7 +170,7 @@ export default function GPSMonitoringPage() {
               <MapPin className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stations.length}</div>
+              <div className="text-2xl font-bold">{stations?.length || 0}</div>
               <p className="text-xs text-muted-foreground">Monitoring network</p>
             </CardContent>
           </Card>
@@ -196,7 +182,7 @@ export default function GPSMonitoringPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {stations.filter((s) => s.isActive).length}
+                {stations?.filter((s: GPSStation) => s?.isActive).length || 0}
               </div>
               <p className="text-xs text-muted-foreground">Currently reporting</p>
             </CardContent>
@@ -209,7 +195,7 @@ export default function GPSMonitoringPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-yellow-600">
-                {stations.filter((s) => s.magnitude > 10).length}
+                {stations?.filter((s: GPSStation) => (s?.elevation || 0) > 10).length || 0}
               </div>
               <p className="text-xs text-muted-foreground">Require attention</p>
             </CardContent>
@@ -222,12 +208,50 @@ export default function GPSMonitoringPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {(stations.reduce((acc, s) => acc + s.magnitude, 0) / stations.length).toFixed(1)}mm
+                {stations && stations.length > 0
+                  ? (
+                      stations.reduce(
+                        (acc: number, s: GPSStation) => acc + (s?.elevation || 0),
+                        0
+                      ) / stations.length
+                    ).toFixed(1)
+                  : '0.0'}
+                m
               </div>
               <p className="text-xs text-muted-foreground">Current average</p>
             </CardContent>
           </Card>
         </div>
+
+        {/* Loading State */}
+        {loading && (
+          <Card className="mb-8 border-2 border-blue-200 bg-blue-50">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4">
+                <Loader className="h-8 w-8 animate-spin text-blue-600" />
+                <div>
+                  <h2 className="font-bold text-blue-600">Loading GPS Data</h2>
+                  <p className="text-sm text-blue-600">Fetching station data from servers...</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <Card className="mb-8 border-2 border-red-200 bg-red-50">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4">
+                <AlertCircle className="h-8 w-8 text-red-600" />
+                <div>
+                  <h2 className="font-bold text-red-600">Error Loading Data</h2>
+                  <p className="text-sm text-red-600">{error}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Tabs defaultValue="stations" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3">
@@ -310,7 +334,7 @@ export default function GPSMonitoringPage() {
 
             {/* Stations List */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-              {filteredStations.map((station) => (
+              {filteredStations.map((station: GPSStation) => (
                 <Card
                   key={station.id}
                   className={`cursor-pointer transition-all ${
@@ -330,8 +354,8 @@ export default function GPSMonitoringPage() {
                         >
                           {station.isActive ? 'ACTIVE' : 'INACTIVE'}
                         </Badge>
-                        <Badge className={`text-xs ${getQualityColor(station.quality)}`}>
-                          {station.quality}
+                        <Badge className={`text-xs ${getQualityColor(station.quality || 'FAIR')}`}>
+                          {station.quality || 'N/A'}
                         </Badge>
                       </div>
                     </div>
@@ -356,8 +380,8 @@ export default function GPSMonitoringPage() {
                       </div>
                       <div>
                         <p className="text-gray-500">Magnitude</p>
-                        <p className={`font-bold ${getMagnitudeColor(station.magnitude)}`}>
-                          {station.magnitude.toFixed(1)}mm
+                        <p className={`font-bold ${getMagnitudeColor(station.magnitude || 0)}`}>
+                          {(station.magnitude || 0).toFixed(1)}mm
                         </p>
                       </div>
                     </div>
@@ -368,34 +392,34 @@ export default function GPSMonitoringPage() {
                         <div className="rounded bg-gray-50 p-2 text-center">
                           <p className="text-gray-500">East (X)</p>
                           <p className="flex items-center justify-center font-medium">
-                            {station.displacementX > 0 ? (
+                            {(station.displacementX || 0) > 0 ? (
                               <TrendingUp className="mr-1 h-3 w-3 text-green-500" />
-                            ) : station.displacementX < 0 ? (
+                            ) : (station.displacementX || 0) < 0 ? (
                               <TrendingDown className="mr-1 h-3 w-3 text-red-500" />
                             ) : null}
-                            {station.displacementX.toFixed(1)}
+                            {(station.displacementX || 0).toFixed(1)}
                           </p>
                         </div>
                         <div className="rounded bg-gray-50 p-2 text-center">
                           <p className="text-gray-500">North (Y)</p>
                           <p className="flex items-center justify-center font-medium">
-                            {station.displacementY > 0 ? (
+                            {(station.displacementY || 0) > 0 ? (
                               <TrendingUp className="mr-1 h-3 w-3 text-green-500" />
-                            ) : station.displacementY < 0 ? (
+                            ) : (station.displacementY || 0) < 0 ? (
                               <TrendingDown className="mr-1 h-3 w-3 text-red-500" />
                             ) : null}
-                            {station.displacementY.toFixed(1)}
+                            {(station.displacementY || 0).toFixed(1)}
                           </p>
                         </div>
                         <div className="rounded bg-gray-50 p-2 text-center">
                           <p className="text-gray-500">Up (Z)</p>
                           <p className="flex items-center justify-center font-medium">
-                            {station.displacementZ > 0 ? (
+                            {(station.displacementZ || 0) > 0 ? (
                               <TrendingUp className="mr-1 h-3 w-3 text-green-500" />
-                            ) : station.displacementZ < 0 ? (
+                            ) : (station.displacementZ || 0) < 0 ? (
                               <TrendingDown className="mr-1 h-3 w-3 text-red-500" />
                             ) : null}
-                            {station.displacementZ.toFixed(1)}
+                            {(station.displacementZ || 0).toFixed(1)}
                           </p>
                         </div>
                       </div>
@@ -404,7 +428,7 @@ export default function GPSMonitoringPage() {
                     <div className="flex items-center justify-between border-t pt-2 text-xs text-gray-500">
                       <div className="flex items-center">
                         <Clock className="mr-1 h-3 w-3" />
-                        {formatTimeAgo(station.lastUpdate)}
+                        {station.lastUpdate ? formatTimeAgo(station.lastUpdate) : 'No data'}
                       </div>
                       <Button variant="ghost" size="sm" className="h-6 text-xs">
                         View Details

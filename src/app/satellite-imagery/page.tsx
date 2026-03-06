@@ -26,7 +26,10 @@ import {
   Layers,
   Filter,
   BarChart3,
+  AlertCircle,
+  Loader,
 } from 'lucide-react';
+import { useSatelliteData, useLatestSatelliteData } from '@/hooks/useSatellite';
 
 // Mock satellite data
 const mockSatelliteData = {
@@ -131,10 +134,31 @@ const mockSatelliteData = {
 };
 
 export default function SatelliteImageryPage() {
-  const [selectedImage, setSelectedImage] = useState(mockSatelliteData.latest);
+  const {
+    data: satelliteDataList,
+    loading,
+    error,
+    refetch,
+  } = useSatelliteData(undefined, undefined, { pollInterval: 30000 });
+  const { data: latestSatellite } = useLatestSatelliteData(undefined, { pollInterval: 30000 });
+
+  // Use real data if available, otherwise use mock data
+  const initialImage = latestSatellite ? latestSatellite : mockSatelliteData.latest;
+
+  const [selectedImage, setSelectedImage] = useState(initialImage);
   const [zoomLevel, setZoomLevel] = useState(100);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showMetadata, setShowMetadata] = useState(true);
+
+  // Helper function to safely get processing info with fallbacks
+  const getProcessingInfo = (image: any) => {
+    return {
+      processingTime: image?.processingInfo?.processingTime || 'N/A',
+      algorithm: image?.processingInfo?.algorithm || 'Statistical Change Detection',
+      baselineComparison: image?.processingInfo?.baselineComparison ?? true,
+      anomalyThreshold: image?.processingInfo?.anomalyThreshold ?? 0.7,
+    };
+  };
 
   const getAnomalyColor = (score: number) => {
     if (score < 0.3) return 'text-green-600';
@@ -149,10 +173,11 @@ export default function SatelliteImageryPage() {
   };
 
   const handleProcessImage = async () => {
-    setIsProcessing(true);
-    // Simulate processing
-    await new Promise((resolve) => setTimeout(resolve, 3000));
-    setIsProcessing(false);
+    try {
+      await refetch();
+    } catch (err) {
+      console.error('Failed to refresh satellite data:', err);
+    }
   };
 
   const formatTimeAgo = (timestamp: string) => {
@@ -178,14 +203,9 @@ export default function SatelliteImageryPage() {
               </p>
             </div>
             <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleProcessImage}
-                disabled={isProcessing}
-              >
-                <RefreshCw className={`mr-2 h-4 w-4 ${isProcessing ? 'animate-spin' : ''}`} />
-                {isProcessing ? 'Processing...' : 'Refresh Data'}
+              <Button variant="outline" size="sm" onClick={handleProcessImage} disabled={loading}>
+                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                {loading ? 'Processing...' : 'Refresh Data'}
               </Button>
               <Button variant="outline" size="sm">
                 <Download className="mr-2 h-4 w-4" />
@@ -194,6 +214,38 @@ export default function SatelliteImageryPage() {
             </div>
           </div>
         </div>
+
+        {/* Loading State */}
+        {loading && (
+          <Card className="mb-8 border-2 border-blue-200 bg-blue-50">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4">
+                <Loader className="h-8 w-8 animate-spin text-blue-600" />
+                <div>
+                  <h2 className="font-bold text-blue-600">Loading Satellite Data</h2>
+                  <p className="text-sm text-blue-600">
+                    Fetching imagery from satellite servers...
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <Card className="mb-8 border-2 border-red-200 bg-red-50">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-4">
+                <AlertCircle className="h-8 w-8 text-red-600" />
+                <div>
+                  <h2 className="font-bold text-red-600">Error Loading Data</h2>
+                  <p className="text-sm text-red-600">{error}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Status Overview */}
         <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -205,7 +257,7 @@ export default function SatelliteImageryPage() {
             <CardContent>
               <div className="text-2xl font-bold">Fresh</div>
               <p className="text-xs text-muted-foreground">
-                {formatTimeAgo(selectedImage.timestamp)}
+                {selectedImage && formatTimeAgo(selectedImage.timestamp)}
               </p>
             </CardContent>
           </Card>
@@ -216,8 +268,10 @@ export default function SatelliteImageryPage() {
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${getAnomalyColor(selectedImage.anomalyScore)}`}>
-                {(selectedImage.anomalyScore * 100).toFixed(1)}%
+              <div
+                className={`text-2xl font-bold ${selectedImage ? getAnomalyColor(selectedImage.anomalyScore) : 'text-gray-600'}`}
+              >
+                {selectedImage ? (selectedImage.anomalyScore * 100).toFixed(1) : '0'}%
               </div>
               <p className="text-xs text-muted-foreground">Current detection level</p>
             </CardContent>
@@ -229,9 +283,11 @@ export default function SatelliteImageryPage() {
               <ImageIcon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{selectedImage.metadata.satellite}</div>
+              <div className="text-2xl font-bold">
+                {selectedImage?.metadata?.satellite || 'N/A'}
+              </div>
               <p className="text-xs text-muted-foreground">
-                {selectedImage.metadata.resolution} resolution
+                {selectedImage?.metadata?.resolution || 'N/A'} resolution
               </p>
             </CardContent>
           </Card>
@@ -243,7 +299,7 @@ export default function SatelliteImageryPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {selectedImage.processingInfo.processingTime}
+                {selectedImage && getProcessingInfo(selectedImage).processingTime}
               </div>
               <p className="text-xs text-muted-foreground">Analysis duration</p>
             </CardContent>
@@ -385,19 +441,23 @@ export default function SatelliteImageryPage() {
                       <div className="flex justify-between">
                         <span className="text-gray-600">Algorithm:</span>
                         <span className="font-medium">
-                          {selectedImage.processingInfo.algorithm}
+                          {selectedImage && getProcessingInfo(selectedImage).algorithm}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Baseline Comparison:</span>
                         <span className="font-medium">
-                          {selectedImage.processingInfo.baselineComparison ? 'Yes' : 'No'}
+                          {selectedImage && getProcessingInfo(selectedImage).baselineComparison
+                            ? 'Yes'
+                            : 'No'}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Threshold:</span>
                         <span className="font-medium">
-                          {(selectedImage.processingInfo.anomalyThreshold * 100).toFixed(0)}%
+                          {selectedImage &&
+                            (getProcessingInfo(selectedImage).anomalyThreshold * 100).toFixed(0)}
+                          %
                         </span>
                       </div>
                     </div>
@@ -408,15 +468,21 @@ export default function SatelliteImageryPage() {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Satellite:</span>
-                        <span className="font-medium">{selectedImage.metadata.satellite}</span>
+                        <span className="font-medium">
+                          {selectedImage?.metadata?.satellite || 'Sentinel-1'}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Resolution:</span>
-                        <span className="font-medium">{selectedImage.metadata.resolution}</span>
+                        <span className="font-medium">
+                          {selectedImage?.metadata?.resolution || '10m'}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Cloud Cover:</span>
-                        <span className="font-medium">{selectedImage.metadata.cloudCover}%</span>
+                        <span className="font-medium">
+                          {selectedImage?.metadata?.cloudCover ?? 0}%
+                        </span>
                       </div>
                     </div>
                   </div>

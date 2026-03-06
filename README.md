@@ -1,61 +1,63 @@
 # Tsunami Alert System - Frontend
 
-A Next.js frontend application for the Tsunami Alert MVP system with Firebase authentication and
-real-time monitoring capabilities.
+A Next.js frontend application for the Tsunami Early Warning System with real-time GPS and Satellite
+Imagery monitoring.
 
-## Environment Variables Setup
+**Focus: GPS and Satellite Imagery based Tsunami Alert Mechanism**
 
-Make sure to configure these environment variables in Vercel dashboard for production deployment.
+## 🎯 Core Features
+
+- **Dashboard**: Real-time system status and alert monitoring
+- **GPS Monitoring**: View seismic station data and displacement readings
+- **Satellite Imagery**: Analyze ocean surface anomalies from satellite data
+- **Alert Management**: Track and manage tsunami alerts
+- **Real-time Updates**: Live data via WebSocket subscriptions
+- **Authentication**: Secure user login and session management
 
 ## 🚀 Tech Stack
 
-| Layer/Feature        | Technology/Tool                              |
-| -------------------- | -------------------------------------------- |
-| **Framework**        | Next.js 14 (App Router, SSR/SSG/ISR)         |
-| **Language**         | TypeScript                                   |
-| **Styling**          | Tailwind CSS, PostCSS                        |
-| **UI Components**    | Custom components (Atomic Design), Shadcn/ui |
-| **State Management** | React Context API, Zustand                   |
-| **GraphQL**          | Apollo Client, GraphQL Code Generator        |
-| **Authentication**   | NextAuth.js with Google OAuth                |
-| **Maps**             | Mapbox GL JS, React Map GL                   |
-| **Image Management** | Cloudinary, Next/Image                       |
-| **Testing**          | Jest, React Testing Library, Playwright      |
-| **Linting/Format**   | ESLint, Prettier, lint-staged, Husky         |
-| **CI/CD**            | GitHub Actions                               |
-| **Deployment**       | Vercel                                       |
+| Layer/Feature        | Technology/Tool            |
+| -------------------- | -------------------------- |
+| **Framework**        | Next.js 14 (App Router)    |
+| **Language**         | TypeScript                 |
+| **Styling**          | Tailwind CSS               |
+| **UI Components**    | Radix UI, Shadcn/ui        |
+| **State Management** | React Context API, Zustand |
+| **GraphQL**          | Apollo Client              |
+| **Maps**             | Mapbox GL JS, React Map GL |
+| **Charts**           | Recharts                   |
+| **Forms**            | React Hook Form, Zod       |
+| **Linting/Format**   | ESLint, Prettier           |
+| **Deployment**       | Vercel                     |
 
 ## 📁 Project Structure
 
 ```
 src/
 ├── app/                    # Next.js 14 App Router
-│   ├── layout.tsx         # Root layout with providers
-│   ├── page.tsx           # Dashboard homepage
-│   ├── auth/              # Authentication pages
-│   ├── dashboard/         # Dashboard routes
-│   └── api/               # API routes
-├── components/            # React components (Atomic Design)
-│   ├── ui/               # Base UI components (Shadcn/ui)
-│   ├── atoms/            # Smallest components
-│   ├── molecules/        # Component combinations
-│   └── organisms/        # Complex components
+│   ├── layout.tsx         # Root layout
+│   ├── page.tsx           # Home page
+│   ├── dashboard/         # Dashboard
+│   ├── gps-monitoring/    # GPS data view
+│   ├── satellite-imagery/ # Satellite images
+│   ├── alert-management/  # Alert tracking
+│   └── auth/              # Authentication
+├── components/            # React components
+│   ├── ui/               # UI components
+│   ├── layout/           # Layout components
+│   └── realtime/         # Real-time subscriptions
 ├── graphql/              # GraphQL operations
 │   ├── queries/          # GraphQL queries
 │   ├── mutations/        # GraphQL mutations
-│   ├── subscriptions/    # Real-time subscriptions
-│   └── fragments/        # Reusable fragments
+│   └── subscriptions/    # Real-time subscriptions
 ├── hooks/                # Custom React hooks
 ├── lib/                  # Utility libraries
 │   ├── apollo-client.ts  # Apollo Client setup
-│   ├── auth.ts          # NextAuth configuration
-│   ├── cloudinary.ts    # Cloudinary integration
-│   └── utils.ts         # Utility functions
-├── stores/               # Zustand state stores
-├── styles/               # Global styles and Tailwind
-├── types/                # TypeScript type definitions
-│   └── generated.ts      # Generated GraphQL types
-└── utils/                # Helper utilities
+│   ├── firebase.ts       # Firebase config
+│   └── utils.ts          # Utility functions
+├── context/              # React Context
+├── styles/               # Global styles
+└── types/                # TypeScript definitions
 ```
 
 ## 🛠️ Installation & Setup
@@ -64,7 +66,7 @@ src/
 
 - Node.js 18+
 - npm 8+
-- Git
+- Backend API running on `http://localhost:4000/graphql`
 
 ### 1. Install Dependencies
 
