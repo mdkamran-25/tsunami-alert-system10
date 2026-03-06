@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useMutation } from '@apollo/client';
 import { gql } from '@apollo/client';
@@ -30,7 +29,6 @@ const SIGNUP_MUTATION = gql`
 `;
 
 export default function SignUpPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -92,7 +90,8 @@ export default function SignUpPage() {
           title: 'Account created!',
           description: `Welcome, ${data.signup.user.name || data.signup.user.email}!`,
         });
-        router.replace('/dashboard');
+        // Hard redirect so AuthGuard reads the fresh JWT on a clean page load
+        window.location.href = '/dashboard';
       }
     } catch (err: any) {
       const message =

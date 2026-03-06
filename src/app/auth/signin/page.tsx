@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useMutation } from '@apollo/client';
 import { gql } from '@apollo/client';
@@ -33,7 +32,6 @@ export default function SignInPage() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const router = useRouter();
   const { toast } = useToast();
 
   const [login] = useMutation(LOGIN_MUTATION);
@@ -58,7 +56,8 @@ export default function SignInPage() {
           title: 'Welcome back!',
           description: `Signed in as ${data.login.user.email}`,
         });
-        router.replace('/dashboard');
+        // Hard redirect so AuthGuard reads the fresh JWT on a clean page load
+        window.location.href = '/dashboard';
       }
     } catch (err: any) {
       const message =
