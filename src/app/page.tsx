@@ -1,20 +1,17 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { hasFirebaseConfig } from '@/lib/firebase';
 import Link from 'next/link';
 
 export default function HomePage() {
-  const router = useRouter();
-
   useEffect(() => {
     // If user is already logged in (JWT), send them straight to dashboard
     const token = localStorage.getItem('authToken');
     if (token) {
-      router.replace('/dashboard');
+      window.location.href = '/dashboard';
     }
-  }, [router]);
+  }, []);
 
   // Always render the same landing page on server AND client (no hydration mismatch)
   return (
