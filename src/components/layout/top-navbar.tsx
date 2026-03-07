@@ -19,6 +19,7 @@ import {
   Menu,
   X,
   Waves,
+  Info,
 } from 'lucide-react';
 
 const navigationItems = [
@@ -58,6 +59,12 @@ const navigationItems = [
     href: '/system-health',
     icon: Activity,
     description: 'System monitoring',
+  },
+  {
+    name: 'How It Works',
+    href: '/how-it-works',
+    icon: Info,
+    description: 'System architecture',
   },
 ];
 
