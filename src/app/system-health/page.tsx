@@ -19,6 +19,8 @@ import {
   Loader,
   AlertCircle,
   Globe,
+  Power,
+  RotateCw,
 } from 'lucide-react';
 import { useCurrentAlert } from '@/hooks/useAlert';
 import { useGPSStations } from '@/hooks/useGPS';
@@ -40,6 +42,13 @@ export default function SystemHealthPage() {
   );
   const [backendLatency, setBackendLatency] = useState<number | null>(null);
   const [backendError, setBackendError] = useState(false);
+  const [restarting, setRestarting] = useState(false);
+  const [restartResult, setRestartResult] = useState<{
+    success?: boolean;
+    message?: string;
+    error?: string;
+  } | null>(null);
+  const [deployStatus, setDeployStatus] = useState<string | null>(null);
 
   const {
     alert,
@@ -80,15 +89,57 @@ export default function SystemHealthPage() {
 
   useEffect(() => {
     checkBackendHealth();
-    const interval = setInterval(checkBackendHealth, 30000);
+    fetchDeployStatus();
+    const interval = setInterval(() => {
+      checkBackendHealth();
+      fetchDeployStatus();
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);
     await checkBackendHealth();
+    await fetchDeployStatus();
     setLastCheck(new Date());
     setTimeout(() => setRefreshing(false), 1000);
+  };
+
+  const fetchDeployStatus = async () => {
+    try {
+      const res = await fetch('/api/render-restart');
+      if (res.ok) {
+        const data = await res.json();
+        setDeployStatus(data.status || null);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleRestart = async () => {
+    if (
+      !confirm(
+        'Are you sure you want to restart the backend container on Render? This will cause a brief downtime.'
+      )
+    )
+      return;
+    setRestarting(true);
+    setRestartResult(null);
+    try {
+      const res = await fetch('/api/render-restart', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setRestartResult({ success: true, message: data.message || 'Restart triggered' });
+        setDeployStatus('build_in_progress');
+      } else {
+        setRestartResult({ error: data.error || 'Failed to restart' });
+      }
+    } catch (err) {
+      setRestartResult({ error: 'Network error — could not reach API' });
+    } finally {
+      setRestarting(false);
+    }
   };
 
   // Build component status list
@@ -229,11 +280,58 @@ export default function SystemHealthPage() {
             </h1>
             <p className="mt-1 text-gray-600">Monitor system components and services</p>
           </div>
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button
+              variant={backendError ? 'default' : 'outline'}
+              size="sm"
+              onClick={handleRestart}
+              disabled={restarting}
+              className={backendError ? 'bg-green-600 text-white hover:bg-green-700' : ''}
+            >
+              {restarting ? (
+                <RotateCw className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Power className="mr-2 h-4 w-4" />
+              )}
+              {backendError ? 'Wake Up Server' : 'Restart Server'}
+            </Button>
+          </div>
         </div>
+
+        {/* Restart Result Banner */}
+        {restartResult && (
+          <div
+            className={`flex items-center justify-between rounded-lg border px-4 py-3 text-sm ${
+              restartResult.success
+                ? 'border-green-200 bg-green-50 text-green-800'
+                : 'border-red-200 bg-red-50 text-red-800'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              {restartResult.success ? (
+                <CheckCircle2 className="h-4 w-4" />
+              ) : (
+                <XCircle className="h-4 w-4" />
+              )}
+              <span>{restartResult.success ? restartResult.message : restartResult.error}</span>
+              {deployStatus && restartResult.success && (
+                <Badge variant="outline" className="ml-2">
+                  {deployStatus}
+                </Badge>
+              )}
+            </div>
+            <button
+              onClick={() => setRestartResult(null)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         {/* Overall Status Banner */}
         <Card className={`border-2 ${overallColor}`}>
