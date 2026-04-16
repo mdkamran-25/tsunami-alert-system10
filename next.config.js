@@ -4,8 +4,13 @@ const nextConfig = {
     typedRoutes: true,
   },
   images: {
-    domains: ['images.unsplash.com', 'lh3.googleusercontent.com'],
+    remotePatterns: [
+      { protocol: 'https', hostname: 'images.unsplash.com' },
+      { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
+      { protocol: 'https', hostname: 'earthengine.googleapis.com' },
+    ],
     formats: ['image/webp', 'image/avif'],
+    dangerouslyAllowSVG: true,
   },
   env: {
     NEXT_PUBLIC_GRAPHQL_ENDPOINT: process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
+import { useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -31,12 +31,44 @@ import {
 } from 'lucide-react';
 import { useSatelliteData, useLatestSatelliteData } from '@/hooks/useSatellite';
 
+function generateMockSVG(
+  region: string,
+  hue: number,
+  score: number,
+  lat: string,
+  lon: string,
+  label: string
+): string {
+  const anomalyColor = score > 0.7 ? '%23ef4444' : score > 0.3 ? '%23eab308' : '%2322c55e';
+  const anomalyLabel = score > 0.7 ? 'ANOMALY' : score > 0.3 ? 'ELEVATED' : 'NORMAL';
+  const noiseRects = Array.from({ length: 50 }, (_, i) => {
+    const x = (i * 73 + hue) % 600;
+    const y = (i * 47 + hue * 3) % 400;
+    const w = 20 + ((i * 13) % 50);
+    const h = 10 + ((i * 11) % 30);
+    const l = 20 + ((i * 7) % 30);
+    return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="hsl(${hue},${10 + (i % 15)}%25,${l}%25)" opacity="${0.3 + (i % 5) * 0.1}"/>`;
+  }).join('');
+  const scanLines = Array.from(
+    { length: 20 },
+    (_, i) => `<rect x="0" y="${i * 20}" width="600" height="1" fill="rgba(255,255,255,0.05)"/>`
+  ).join('');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><defs><linearGradient id="bg" x1="0%25" y1="0%25" x2="100%25" y2="100%25"><stop offset="0%25" style="stop-color:hsl(${hue},20%25,15%25)"/><stop offset="50%25" style="stop-color:hsl(${hue},15%25,22%25)"/><stop offset="100%25" style="stop-color:hsl(${hue},20%25,18%25)"/></linearGradient></defs><rect width="100%25" height="100%25" fill="url(%23bg)"/>${noiseRects}${scanLines}<line x1="300" y1="0" x2="300" y2="400" stroke="rgba(255,255,255,0.1)" stroke-dasharray="4,8"/><line x1="0" y1="200" x2="600" y2="200" stroke="rgba(255,255,255,0.1)" stroke-dasharray="4,8"/><rect x="12" y="12" width="280" height="70" rx="6" fill="rgba(0,0,0,0.6)"/><text x="22" y="32" font-family="monospace" font-size="11" fill="%2394a3b8">SENTINEL-1 SAR</text><text x="22" y="52" font-family="Arial,sans-serif" font-size="15" fill="white" font-weight="bold">${region}</text><text x="22" y="70" font-family="monospace" font-size="10" fill="%2394a3b8">${lat}N ${lon}E</text><rect x="420" y="12" width="168" height="38" rx="6" fill="rgba(0,0,0,0.6)"/><circle cx="436" cy="31" r="5" fill="${anomalyColor}"/><text x="448" y="27" font-family="monospace" font-size="10" fill="%2394a3b8">ANOMALY</text><text x="448" y="40" font-family="monospace" font-size="11" fill="${anomalyColor}" font-weight="bold">${(score * 100).toFixed(1)}%25 ${anomalyLabel}</text><rect x="0" y="370" width="600" height="30" fill="rgba(0,0,0,0.5)"/><text x="12" y="389" font-family="monospace" font-size="10" fill="%2364748b">${label}</text></svg>`;
+  return `data:image/svg+xml,${svg}`;
+}
+
 // Mock satellite data
 const mockSatelliteData = {
   latest: {
     id: '1',
-    imageUrl:
-      'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZ3JhZGllbnQiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojMzMzO3N0b3Atb3BhY2l0eToxIiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjUwJSIgc3R5bGU9InN0b3AtY29sb3I6IzY2NjtzdG9wLW9wYWNpdHk6MSIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjojOTk5O3N0b3Atb3BhY2l0eToxIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmFkaWVudCkiLz4KICA8dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkxpdmUgU2F0ZWxsaXRlIEltYWdlcnk8L3RleHQ+Cjwvc3ZnPgo=',
+    imageUrl: generateMockSVG(
+      'Pacific Northwest',
+      200,
+      0.23,
+      '45.0',
+      '-125.0',
+      'MODE: IW | RES: 10m | SOURCE: Simulated'
+    ),
     timestamp: new Date().toISOString(),
     region: 'Pacific Northwest',
     regionBounds: [-130, 40, -120, 50],
@@ -60,12 +92,18 @@ const mockSatelliteData = {
   historical: [
     {
       id: '2',
-      imageUrl:
-        'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZ3JhZGllbnQiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojMzMzO3N0b3Atb3BhY2l0eToxIiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjUwJSIgc3R5bGU9InN0b3AtY29sb3I6IzY2NjtzdG9wLW9wYWNpdHk6MSIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjojOTk5O3N0b3Atb3BhY2l0eToxIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmFkaWVudCkiLz4KICA8dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkhpc3RvcmljYWwgSW1hZ2VyeTwvdGV4dD4KPC9zdmc+Cg==',
+      imageUrl: generateMockSVG(
+        'Japan Trench',
+        30,
+        0.18,
+        '38.0',
+        '143.0',
+        'MODE: IW | RES: 10m | 6h ago'
+      ),
       timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-      region: 'Pacific Northwest',
-      regionBounds: [-130, 40, -120, 50],
-      regionCenter: [-125, 45],
+      region: 'Japan Trench',
+      regionBounds: [140, 34, 146, 42],
+      regionCenter: [143, 38],
       anomalyScore: 0.18,
       metadata: {
         satellite: 'Sentinel-1',
@@ -84,12 +122,18 @@ const mockSatelliteData = {
     },
     {
       id: '3',
-      imageUrl:
-        'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZ3JhZGllbnQiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojMzMzO3N0b3Atb3BhY2l0eToxIiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjUwJSIgc3R5bGU9InN0b3AtY29sb3I6IzY2NjtzdG9wLW9wYWNpdHk6MSIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjojOTk5O3N0b3Atb3BhY2l0eToxIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmFkaWVudCkiLz4KICA8dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkhpc3RvcmljYWwgSW1hZ2VyeTwvdGV4dD4KPC9zdmc+Cg==',
+      imageUrl: generateMockSVG(
+        'Peru-Chile Trench',
+        120,
+        0.31,
+        '-20.0',
+        '-72.0',
+        'MODE: IW | RES: 10m | 12h ago'
+      ),
       timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-      region: 'Pacific Northwest',
-      regionBounds: [-130, 40, -120, 50],
-      regionCenter: [-125, 45],
+      region: 'Peru-Chile Trench',
+      regionBounds: [-76, -24, -68, -16],
+      regionCenter: [-72, -20],
       anomalyScore: 0.31,
       metadata: {
         satellite: 'Sentinel-1',
@@ -108,12 +152,18 @@ const mockSatelliteData = {
     },
     {
       id: '4',
-      imageUrl:
-        'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZ3JhZGllbnQiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojMzMzO3N0b3Atb3BhY2l0eToxIiAvPgogICAgICA8c3RvcCBvZmZzZXQ9IjUwJSIgc3R5bGU9InN0b3AtY29sb3I6IzY2NjtzdG9wLW9wYWNpdHk6MSIgLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjojOTk5O3N0b3Atb3BhY2l0eToxIiAvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmFkaWVudCkiLz4KICA8dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkhpc3RvcmljYWwgSW1hZ2VyeTwvdGV4dD4KPC9zdmc+Cg==',
+      imageUrl: generateMockSVG(
+        'Indo-Pacific',
+        280,
+        0.15,
+        '-5.0',
+        '110.0',
+        'MODE: IW | RES: 10m | 18h ago'
+      ),
       timestamp: new Date(Date.now() - 18 * 60 * 60 * 1000).toISOString(),
-      region: 'Pacific Northwest',
-      regionBounds: [-130, 40, -120, 50],
-      regionCenter: [-125, 45],
+      region: 'Indo-Pacific',
+      regionBounds: [100, -10, 120, 0],
+      regionCenter: [110, -5],
       anomalyScore: 0.15,
       metadata: {
         satellite: 'Sentinel-1',
@@ -146,6 +196,13 @@ export default function SatelliteImageryPage() {
   const initialImage = latestSatellite ? latestSatellite : mockSatelliteData.latest;
 
   const [selectedImage, setSelectedImage] = useState(initialImage);
+
+  // Update selectedImage when real data arrives from the backend
+  useEffect(() => {
+    if (latestSatellite) {
+      setSelectedImage(latestSatellite);
+    }
+  }, [latestSatellite]);
   const [zoomLevel, setZoomLevel] = useState(100);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showMetadata, setShowMetadata] = useState(true);
@@ -374,10 +431,11 @@ export default function SatelliteImageryPage() {
 
                 {/* Image Display */}
                 <div
-                  className="relative overflow-hidden rounded-lg bg-gray-900"
+                  className="relative overflow-hidden rounded-lg border border-gray-700 bg-gray-800"
                   style={{ minHeight: '400px' }}
                 >
-                  <Image
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
                     src={selectedImage.imageUrl}
                     alt="Satellite imagery"
                     width={800}
@@ -388,7 +446,6 @@ export default function SatelliteImageryPage() {
                       transformOrigin: 'center center',
                       transition: 'transform 0.2s ease',
                     }}
-                    priority
                   />
 
                   {/* Overlay Information */}
@@ -500,7 +557,10 @@ export default function SatelliteImageryPage() {
                 <CardDescription>Historical satellite data</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                {[selectedImage, ...mockSatelliteData.historical].map((image, index) => (
+                {(satelliteDataList && satelliteDataList.length > 0
+                  ? satelliteDataList
+                  : [selectedImage, ...mockSatelliteData.historical]
+                ).map((image: any, index: number) => (
                   <div
                     key={image.id}
                     className={`cursor-pointer rounded-lg border p-3 transition-colors ${
@@ -513,10 +573,11 @@ export default function SatelliteImageryPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium">
-                          {index === 0 ? 'Latest' : formatTimeAgo(image.timestamp)}
+                          {index === 0 ? 'Latest' : image.region || formatTimeAgo(image.timestamp)}
                         </p>
                         <p className="text-xs text-gray-500">
-                          Score: {(image.anomalyScore * 100).toFixed(1)}%
+                          Score: {(image.anomalyScore * 100).toFixed(1)}% ·{' '}
+                          {formatTimeAgo(image.timestamp)}
                         </p>
                       </div>
                       <Badge className={`text-xs ${getAnomalyBadgeColor(image.anomalyScore)}`}>

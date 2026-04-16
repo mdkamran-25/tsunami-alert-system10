@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useMutation } from '@apollo/client';
 import { gql } from '@apollo/client';
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { authDebug, debugEnvironment, debugStorage } from '@/lib/auth-debug';
 
 // GraphQL mutation for login
 const LOGIN_MUTATION = gql`
@@ -30,38 +31,94 @@ const LOGIN_MUTATION = gql`
 
 export default function SignInPage() {
   const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('admin@tsunami.local');
+  const [password, setPassword] = useState('admin123');
   const { toast } = useToast();
 
   const [login] = useMutation(LOGIN_MUTATION);
 
+  // Initialize debug on mount
+  useEffect(() => {
+    authDebug.info('PAGE', 'SignIn Page Mounted');
+    debugEnvironment();
+    debugStorage();
+  }, []);
+
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    authDebug.info('AUTH', 'Login attempt started', { email });
 
     try {
-      const { data } = await login({
+      authDebug.info('AUTH', 'Calling GraphQL login mutation...');
+      const { data, errors } = await login({
         variables: {
-          email,
+          email: email.trim(),
           password,
         },
       });
 
+      authDebug.info('AUTH', 'GraphQL response received', { hasData: !!data, hasErrors: !!errors });
+
+      if (errors) {
+        const errorMsg = errors.map((e: any) => e.message).join(', ');
+        authDebug.error('AUTH', 'GraphQL errors', { errors: errorMsg });
+        throw new Error(errorMsg);
+      }
+
       if (data?.login?.token) {
+        authDebug.success('AUTH', 'Login successful, storing tokens');
         localStorage.setItem('authToken', data.login.token);
         localStorage.setItem('refreshToken', data.login.refreshToken);
         localStorage.setItem('user', JSON.stringify(data.login.user));
+
+        authDebug.success('AUTH', 'Tokens stored, redirecting to dashboard', {
+          user: data.login.user.email,
+          role: data.login.user.role,
+        });
+
         toast({
           title: 'Welcome back!',
           description: `Signed in as ${data.login.user.email}`,
         });
+
         // Hard redirect so AuthGuard reads the fresh JWT on a clean page load
-        window.location.href = '/dashboard';
+        setTimeout(() => {
+          window.location.href = '/dashboard';
+        }, 500);
+      } else {
+        authDebug.error('AUTH', 'No token in response', { data });
+        throw new Error('No authentication token received');
       }
     } catch (err: any) {
-      const message =
-        err?.graphQLErrors?.[0]?.message || err.message || 'Invalid email or password';
+      authDebug.error('AUTH', 'Login failed', {
+        errorType: err.constructor.name,
+        message: err.message,
+        graphQLErrors: err?.graphQLErrors?.map((e: any) => e.message),
+        networkError: err?.networkError
+          ? {
+              message: err.networkError.message,
+              statusCode: err.networkError.statusCode,
+            }
+          : null,
+      });
+
+      let message = 'Invalid email or password';
+
+      // Network/connection error
+      if (err.networkError?.statusCode === 0 || err.networkError?.message?.includes('fetch')) {
+        message = 'Cannot connect to backend. Check if server is running at http://localhost:4000';
+        authDebug.error('AUTH', 'Network connection failed', { message });
+      }
+      // GraphQL error
+      else if (err?.graphQLErrors?.[0]?.message) {
+        message = err.graphQLErrors[0].message;
+      }
+      // Other errors
+      else if (err.message) {
+        message = err.message;
+      }
+
       toast({
         variant: 'destructive',
         title: 'Sign in failed',
@@ -141,6 +198,15 @@ export default function SignInPage() {
               </Button>
             </form>
 
+            <div className="rounded-lg bg-blue-50 p-3 text-xs text-blue-700">
+              Demo credentials (pre-filled):
+              <div className="mt-2 font-mono">
+                Email: admin@tsunami.local
+                <br />
+                Password: admin123
+              </div>
+            </div>
+
             <div className="text-center">
               <span className="text-sm text-muted-foreground">
                 Don&apos;t have an account?{' '}
@@ -151,6 +217,28 @@ export default function SignInPage() {
                   Sign up
                 </Link>
               </span>
+            </div>
+
+            <div className="border-t pt-4">
+              <details className="cursor-pointer">
+                <summary className="text-xs font-semibold text-muted-foreground">
+                  🔐 Debug Info (Click to expand)
+                </summary>
+                <div className="mt-2 space-y-1 font-mono text-xs">
+                  <div>Backend: {process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT}</div>
+                  <div>WebSocket: {process.env.NEXT_PUBLIC_GRAPHQL_WS_ENDPOINT}</div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const logs = (window as any).__authDebugLogs || [];
+                      console.table(logs);
+                    }}
+                    className="mt-2 text-blue-600 hover:underline"
+                  >
+                    View Console Logs
+                  </button>
+                </div>
+              </details>
             </div>
           </CardContent>
         </Card>
