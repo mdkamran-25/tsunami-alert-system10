@@ -585,7 +585,7 @@ export default function HowItWorksPage() {
                     'Health checks',
                     'Environment variables',
                   ]}
-                  url="major-project-backend-o1vb.onrender.com"
+                  url="tsunami-alert-backend-production.up.railway.app"
                 />
                 <DeployBox
                   icon={<HardDrive className="h-8 w-8 text-green-600" />}

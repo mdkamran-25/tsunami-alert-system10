@@ -56,7 +56,7 @@
   "rewrites": [
     {
       "source": "/api/graphql",
-      "destination": "https://major-project-backend-o1vb.onrender.com/graphql"
+      "destination": "https://tsunami-alert-backend-production.up.railway.app/graphql"
     }
   ]
 }
