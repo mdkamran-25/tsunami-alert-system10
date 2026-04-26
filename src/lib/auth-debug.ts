@@ -113,8 +113,10 @@ export const authDebug = new AuthDebugger();
  */
 export function debugEnvironment() {
   authDebug.info('ENV', 'GraphQL Endpoint Configuration', {
-    httpEndpoint: process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT || 'https://api.navbharatlabs.com/graphql',
-    wsEndpoint: process.env.NEXT_PUBLIC_GRAPHQL_WS_ENDPOINT || 'wss://api.navbharatlabs.com/graphql',
+    httpEndpoint:
+      process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT || 'https://tsunami-alert-backend-production.up.railway.app/graphql',
+    wsEndpoint:
+      process.env.NEXT_PUBLIC_GRAPHQL_WS_ENDPOINT || 'wss://tsunami-alert-backend-production.up.railway.app/graphql',
     nodeEnv: process.env.NODE_ENV,
   });
 }
