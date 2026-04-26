@@ -92,10 +92,10 @@ export function TopNavbar() {
     <>
       {/* Fixed Top Navbar */}
       <nav className="fixed left-0 right-0 top-0 z-50 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur-md">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-2 sm:px-3 lg:px-4">
           <div className="flex h-16 items-center justify-between">
             {/* Logo and Brand */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
               <Link
                 href="/dashboard"
                 className="flex items-center space-x-3 transition-opacity hover:opacity-80"
@@ -113,7 +113,7 @@ export function TopNavbar() {
             </div>
 
             {/* Desktop Navigation Links */}
-            <div className="hidden items-center space-x-1 lg:flex">
+            <div className="hidden items-center space-x-0 lg:flex">
               {filteredNavItems.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.href);
@@ -123,7 +123,7 @@ export function TopNavbar() {
                     key={item.name}
                     href={item.href}
                     className={cn(
-                      'flex items-center space-x-2 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 hover:bg-gray-100',
+                      'flex items-center space-x-1 rounded-md px-2 py-1.5 text-xs font-medium transition-all duration-200 hover:bg-gray-100',
                       active
                         ? 'border border-tsunami-blue-200 bg-tsunami-blue-50 text-tsunami-blue-700'
                         : 'text-gray-600 hover:text-gray-900'
@@ -137,7 +137,7 @@ export function TopNavbar() {
             </div>
 
             {/* Right Side - Status, Account Items, and User Menu */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
               {/* Status Indicator */}
               <div className="hidden md:block">
                 <CompactStatusIndicator />
