@@ -113,8 +113,8 @@ export const authDebug = new AuthDebugger();
  */
 export function debugEnvironment() {
   authDebug.info('ENV', 'GraphQL Endpoint Configuration', {
-    httpEndpoint: process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT || 'localhost:4000/graphql',
-    wsEndpoint: process.env.NEXT_PUBLIC_GRAPHQL_WS_ENDPOINT || 'localhost:4000/graphql',
+    httpEndpoint: process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT || 'https://api.navbharatlabs.com/graphql',
+    wsEndpoint: process.env.NEXT_PUBLIC_GRAPHQL_WS_ENDPOINT || 'wss://api.navbharatlabs.com/graphql',
     nodeEnv: process.env.NODE_ENV,
   });
 }
