@@ -13,8 +13,9 @@ const httpLink = createHttpLink({
 });
 
 // ── WebSocket Link (subscriptions) ──
+// Disabled in production (Vercel) as WebSocket cannot be proxied
 const wsLink =
-  typeof window !== 'undefined'
+  typeof window !== 'undefined' && window.location.hostname === 'localhost'
     ? new GraphQLWsLink(
         createClient({
           url: getGraphQLWsEndpoint(),
@@ -64,7 +65,7 @@ const errorLink = onError(({ graphQLErrors, networkError }) => {
   }
 });
 
-// ── Split: WS for subscriptions, HTTP for everything else ──
+// ── Split: WS for subscriptions on localhost, HTTP+polling for production ──
 const splitLink =
   typeof window !== 'undefined' && wsLink
     ? split(
