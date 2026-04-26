@@ -27,6 +27,12 @@ export function getGraphQLEndpoint() {
 }
 
 export function getGraphQLWsEndpoint() {
+  // In production (browser environment), use HTTP proxy for subscriptions
+  // (WebSocket subscriptions will fall back to polling)
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    return GRAPHQL_PROXY_PATH;
+  }
+
   const explicitWsEndpoint = process.env.NEXT_PUBLIC_GRAPHQL_WS_ENDPOINT;
   if (explicitWsEndpoint) {
     return explicitWsEndpoint;

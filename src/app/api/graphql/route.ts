@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': request.headers.get('authorization') || '',
+        Authorization: request.headers.get('authorization') || '',
       },
       body: JSON.stringify(body),
     });
@@ -34,11 +34,26 @@ export async function POST(request: NextRequest) {
 }
 
 export async function OPTIONS() {
-  return NextResponse.json({}, {
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
+  return NextResponse.json(
+    {},
+    {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      },
+    }
+  );
+}
+
+export async function GET() {
+  // Health check endpoint for subscriptions graceful fallback
+  return NextResponse.json(
+    { status: 'ok', message: 'GraphQL proxy is running' },
+    {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+      },
+    }
+  );
 }
