@@ -25,6 +25,7 @@ import {
 import { useCurrentAlert } from '@/hooks/useAlert';
 import { useGPSStations } from '@/hooks/useGPS';
 import { useSatelliteData } from '@/hooks/useSatellite';
+import { getApiBaseUrl } from '@/lib/api-endpoints';
 
 interface ComponentStatus {
   name: string;
@@ -69,8 +70,7 @@ export default function SystemHealthPage() {
   const checkBackendHealth = async () => {
     const start = Date.now();
     try {
-      const endpoint = process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT || 'http://localhost:4000/graphql';
-      const baseUrl = endpoint.replace('/graphql', '');
+      const baseUrl = getApiBaseUrl();
       const res = await fetch(`${baseUrl}/health`, { cache: 'no-store' });
       const latency = Date.now() - start;
       setBackendLatency(latency);

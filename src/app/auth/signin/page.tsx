@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { authDebug, debugEnvironment, debugStorage } from '@/lib/auth-debug';
+import { getApiBaseUrl, getGraphQLEndpoint, getGraphQLWsEndpoint } from '@/lib/api-endpoints';
 
 // GraphQL mutation for login
 const LOGIN_MUTATION = gql`
@@ -107,7 +108,7 @@ export default function SignInPage() {
 
       // Network/connection error
       if (err.networkError?.statusCode === 0 || err.networkError?.message?.includes('fetch')) {
-        const backendUrl = process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT || 'http://localhost:4000';
+        const backendUrl = getApiBaseUrl();
         message = `Cannot connect to backend. Check if server is running at ${backendUrl}`;
         authDebug.error('AUTH', 'Network connection failed', { message });
       }
@@ -131,14 +132,14 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen p-4 bg-gradient-to-br from-tsunami-blue-50 via-white to-tsunami-green-50">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-tsunami-blue-50 via-white to-tsunami-green-50 p-4">
       <div className="w-full max-w-md">
         <Card className="border-0 shadow-2xl">
           <CardHeader className="space-y-4 text-center">
-            <div className="flex items-center justify-center w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-tsunami-blue-500 to-tsunami-green-500">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-tsunami-blue-500 to-tsunami-green-500">
               <span className="text-2xl">🌊</span>
             </div>
-            <CardTitle className="text-2xl font-bold text-transparent bg-gradient-to-r from-tsunami-blue-600 to-tsunami-green-600 bg-clip-text">
+            <CardTitle className="bg-gradient-to-r from-tsunami-blue-600 to-tsunami-green-600 bg-clip-text text-2xl font-bold text-transparent">
               Welcome Back
             </CardTitle>
             <CardDescription className="text-base">
@@ -186,11 +187,11 @@ export default function SignInPage() {
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full h-12 text-base font-medium text-white bg-gradient-to-r from-tsunami-blue-600 to-tsunami-green-600 hover:from-tsunami-blue-700 hover:to-tsunami-green-700"
+                className="h-12 w-full bg-gradient-to-r from-tsunami-blue-600 to-tsunami-green-600 text-base font-medium text-white hover:from-tsunami-blue-700 hover:to-tsunami-green-700"
               >
                 {loading ? (
                   <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                     Signing in...
                   </>
                 ) : (
@@ -199,7 +200,7 @@ export default function SignInPage() {
               </Button>
             </form>
 
-            <div className="p-3 text-xs text-blue-700 rounded-lg bg-blue-50">
+            <div className="rounded-lg bg-blue-50 p-3 text-xs text-blue-700">
               Demo credentials (pre-filled):
               <div className="mt-2 font-mono">
                 Email: admin@tsunami.local
@@ -220,14 +221,15 @@ export default function SignInPage() {
               </span>
             </div>
 
-            <div className="pt-4 border-t">
+            <div className="border-t pt-4">
               <details className="cursor-pointer">
                 <summary className="text-xs font-semibold text-muted-foreground">
                   🔐 Debug Info (Click to expand)
                 </summary>
                 <div className="mt-2 space-y-1 font-mono text-xs">
-                  <div>Backend: {process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT}</div>
-                  <div>WebSocket: {process.env.NEXT_PUBLIC_GRAPHQL_WS_ENDPOINT}</div>
+                  <div>API Base: {getApiBaseUrl()}</div>
+                  <div>Backend: {getGraphQLEndpoint()}</div>
+                  <div>WebSocket: {getGraphQLWsEndpoint()}</div>
                   <button
                     type="button"
                     onClick={() => {

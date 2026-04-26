@@ -4,10 +4,11 @@ import { getMainDefinition } from '@apollo/client/utilities';
 import { setContext } from '@apollo/client/link/context';
 import { onError } from '@apollo/client/link/error';
 import { createClient } from 'graphql-ws';
+import { getGraphQLEndpoint, getGraphQLWsEndpoint } from '@/lib/api-endpoints';
 
 // ── HTTP Link ──
 const httpLink = createHttpLink({
-  uri: process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT || 'http://localhost:4000/graphql',
+  uri: getGraphQLEndpoint(),
   credentials: 'omit',
 });
 
@@ -16,7 +17,7 @@ const wsLink =
   typeof window !== 'undefined'
     ? new GraphQLWsLink(
         createClient({
-          url: process.env.NEXT_PUBLIC_GRAPHQL_WS_ENDPOINT || 'ws://localhost:4000/graphql',
+          url: getGraphQLWsEndpoint(),
           connectionParams: () => {
             const token = localStorage.getItem('authToken');
             return { authorization: token ? `Bearer ${token}` : '' };

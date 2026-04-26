@@ -3,6 +3,8 @@
  * Comprehensive logging for all auth operations
  */
 
+import { getApiBaseUrl, getGraphQLEndpoint, getGraphQLWsEndpoint } from '@/lib/api-endpoints';
+
 export interface AuthDebugLog {
   timestamp: string;
   level: 'INFO' | 'ERROR' | 'WARN' | 'SUCCESS';
@@ -113,10 +115,9 @@ export const authDebug = new AuthDebugger();
  */
 export function debugEnvironment() {
   authDebug.info('ENV', 'GraphQL Endpoint Configuration', {
-    httpEndpoint:
-      process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT || 'https://tsunami-alert-backend-production.up.railway.app/graphql',
-    wsEndpoint:
-      process.env.NEXT_PUBLIC_GRAPHQL_WS_ENDPOINT || 'wss://tsunami-alert-backend-production.up.railway.app/graphql',
+    apiBaseUrl: getApiBaseUrl(),
+    httpEndpoint: getGraphQLEndpoint(),
+    wsEndpoint: getGraphQLWsEndpoint(),
     nodeEnv: process.env.NODE_ENV,
   });
 }

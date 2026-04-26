@@ -585,7 +585,7 @@ export default function HowItWorksPage() {
                     'Health checks',
                     'Environment variables',
                   ]}
-                  url="tsunami-alert-backend-production.up.railway.app"
+                  url="api.navbharatlabs.com"
                 />
                 <DeployBox
                   icon={<HardDrive className="h-8 w-8 text-green-600" />}

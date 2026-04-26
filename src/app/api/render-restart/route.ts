@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getApiBaseUrl } from '@/lib/api-endpoints';
 
 // Backend is now deployed on Railway, not Render
 // This endpoint is kept for compatibility but returns a success message
@@ -8,7 +9,7 @@ export async function POST() {
   return NextResponse.json({
     success: true,
     message: 'Backend is deployed on Railway. Auto-redeploy on git push is enabled.',
-    backend: 'https://tsunami-alert-backend-production.up.railway.app',
+    backend: getApiBaseUrl(),
   });
 }
 
